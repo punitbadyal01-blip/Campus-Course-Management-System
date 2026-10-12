@@ -1,0 +1,10 @@
+<?php
+require_once dirname(__DIR__) . '/middleware/bootstrap.php';
+require_role('admin');
+$db=Database::connection();$term=$db->query('SELECT id FROM academic_terms WHERE is_current=1 LIMIT 1')->fetchColumn();
+$course=(new Course($db))->get((int)($_GET['id']??0),$term?(int)$term:0);if(!$course){http_response_code(404);exit('Course not found.');}
+$days=['','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+page_start('Course details','admin/courses.php');
+?>
+<div class="content-width"><?php page_title($course['title'],$course['code']); ?><div class="panel"><div class="d-flex justify-content-between"><span class="badge text-bg-<?= $course['active']?'success':'secondary' ?>"><?= $course['active']?'Active':'Inactive' ?></span><a class="btn btn-outline-primary btn-sm" href="<?= e(url('admin/course_form.php?id='.(int)$course['id'])) ?>">Edit course</a></div><p class="mt-3"><?= nl2br(e($course['description']?:'No description.')) ?></p><div class="row g-3"><div class="col-sm-3"><small>Department</small><div><?= e($course['department_name']?:'All departments') ?></div></div><div class="col-sm-3"><small>Semester</small><div><?= (int)$course['semester'] ?></div></div><div class="col-sm-3"><small>Credits</small><div><?= (int)$course['credits'] ?></div></div><div class="col-sm-3"><small>Faculty</small><div><?= e($course['faculty_name']) ?></div></div><div class="col-sm-3"><small>Seats</small><div><?= max(0,(int)$course['capacity']-(int)$course['enrolled']) ?> / <?= (int)$course['capacity'] ?></div></div></div><hr><h2 class="h6">Schedule</h2><?php foreach($course['schedules'] as $s): ?><span class="schedule-pill d-inline-block me-2"><?= e($days[(int)$s['day_of_week']]) ?> <?= e(substr($s['starts_at'],0,5).'–'.substr($s['ends_at'],0,5).' · '.$s['room']) ?></span><?php endforeach; ?><hr><h2 class="h6">Prerequisites</h2><?php if($course['prerequisites']): ?><?= e(implode(', ',array_column($course['prerequisites'],'code'))) ?><?php else: ?>None<?php endif; ?></div></div>
+<?php page_end(); ?>

@@ -1,0 +1,16 @@
+<?php
+require_once dirname(__DIR__) . '/middleware/bootstrap.php';
+require_role('student');
+$db=Database::connection(); $term=$db->query('SELECT * FROM academic_terms WHERE is_current=1 LIMIT 1')->fetch();$student=(new Student($db))->profile(current_user_id());
+$course=(new Course($db))->get((int)($_GET['id']??0),(int)($term['id']??0));
+if(!$course || !$course['active']) { http_response_code(404); exit('Course not found.'); }
+$courseEligible=($course['department_id']===null||(int)$course['department_id']===(int)$student['department_id'])&&(int)$course['semester']===(int)$student['semester'];
+$days=['','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+$seats=max(0,(int)$course['capacity']-(int)$course['enrolled']);
+page_start($course['title'],'student/courses.php');
+?>
+<div class="content-width"><?php page_title($course['title'],$course['code'].' · '.($course['department_name']?:'Open to all departments')); ?>
+<div class="row g-4"><div class="col-lg-8"><div class="panel"><p><?= nl2br(e($course['description'] ?: 'No course description provided.')) ?></p><div class="row g-3 mt-2"><div class="col-sm-4"><div class="stat-label">Credits</div><strong><?= (int)$course['credits'] ?></strong></div><div class="col-sm-4"><div class="stat-label">Semester</div><strong><?= (int)$course['semester'] ?></strong></div><div class="col-sm-4"><div class="stat-label">Faculty</div><strong><?= e($course['faculty_name']) ?></strong></div></div><hr><h2 class="h6 fw-bold">Class schedule</h2><?php if($course['schedules']): foreach($course['schedules'] as $s): ?><div class="schedule-pill d-inline-block me-2"><strong><?= e($days[(int)$s['day_of_week']]??'') ?></strong><?= e(substr($s['starts_at'],0,5)) ?>–<?= e(substr($s['ends_at'],0,5)) ?> · <?= e($s['room']) ?></div><?php endforeach; else: ?><p class="text-muted">Schedule not published.</p><?php endif; ?><hr><h2 class="h6 fw-bold">Prerequisites</h2><?php if($course['prerequisites']): ?><ul><?php foreach($course['prerequisites'] as $p): ?><li><?= e($p['code'].' · '.$p['title']) ?></li><?php endforeach; ?></ul><?php else: ?><p class="text-muted mb-0">No prerequisites.</p><?php endif; ?></div></div>
+<div class="col-lg-4"><div class="panel"><div class="stat-label">Seat availability</div><div class="stat-value"><?= $seats ?> <small class="fs-6 text-muted">/ <?= (int)$course['capacity'] ?></small></div><p class="text-muted small mt-2">Seats are reserved while a request is pending or approved.</p><?php if(!$courseEligible): ?><div class="alert alert-info small">This course is for <?= e($course['department_name']?:'all departments') ?>, semester <?= (int)$course['semester'] ?>. Your profile is semester <?= (int)$student['semester'] ?>.</div><button class="btn btn-secondary w-100" disabled>Not eligible for this course</button><?php elseif($term && $seats): ?><form method="post" action="<?= e(url('student/register.php')) ?>" data-confirm-submit="Request registration for this course?"><?= csrf_field() ?><input type="hidden" name="course_id" value="<?= (int)$course['id'] ?>"><button class="btn btn-primary w-100">Request registration</button></form><?php else: ?><button class="btn btn-secondary w-100" disabled><?= $term?'Course full':'No active registration term' ?></button><?php endif; ?></div></div></div>
+</div>
+<?php page_end(); ?>
