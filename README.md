@@ -142,4 +142,5 @@ Import the included data and create the initial admin and demo student before ru
 
 To run the browser workflow, visit each route from its dashboard; no test-only account or seeded registration data is required. The demo account begins with no registrations, which lets you verify the registration path directly.
 #   C a m p u s - C o u r s e - M a n a g e m e n t - S y s t e m  
+ #   C a m p u s - C o u r s e - M a n a g e m e n t - S y s t e m  
  
